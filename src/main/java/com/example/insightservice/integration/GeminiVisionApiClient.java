@@ -15,8 +15,9 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class GeminiVisionApiClient {
 
-    @Value("${gemini.api-key}")
+    @Value("[REDACTED]")
     private String apiKey;
+
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
