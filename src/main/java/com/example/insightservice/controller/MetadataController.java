@@ -1,5 +1,6 @@
 package com.example.insightservice.controller;
 
+import com.example.insightservice.dto.Metadata;
 import com.example.insightservice.util.MetadataExtractor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -17,15 +18,15 @@ public class MetadataController {
     private final MetadataExtractor extractor;
 
     @PostMapping(value = "/extract", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<JsonNode> extractMetadata(
+    public ResponseEntity<?> extractMetadata(
             @RequestParam("image") MultipartFile imageFile,
             @RequestParam(value = "includeAddress", defaultValue = "false") boolean includeAddress,
             @RequestParam(value = "includeLandmarks", defaultValue = "false") boolean includeLandmarks,
             @RequestParam(value = "landmarkRadius", defaultValue = "1000") int landmarkRadius) {
 
         try {
-            JsonNode resultNode = extractor.extractMetadata(imageFile, includeAddress, includeLandmarks, landmarkRadius);
-            return ResponseEntity.ok(resultNode);
+            Metadata result = extractor.extractMetadata(imageFile, includeAddress, includeLandmarks, landmarkRadius);
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
             ObjectNode error = extractor.getObjectMapper().createObjectNode();
             error.put("error", "메타데이터 추출 실패: " + e.getMessage());

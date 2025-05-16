@@ -2,14 +2,15 @@ package com.example.insightservice.util;
 
 import com.drew.imaging.ImageMetadataReader;
 import com.drew.metadata.Directory;
-import com.drew.metadata.Metadata;
 import com.drew.metadata.Tag;
 import com.drew.metadata.exif.ExifIFD0Directory;
 import com.drew.metadata.exif.ExifSubIFDDirectory;
 import com.drew.metadata.exif.GpsDirectory;
+import com.example.insightservice.dto.Landmark;
+import com.example.insightservice.dto.Location;
+import com.example.insightservice.dto.Metadata;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,34 +33,37 @@ public class MetadataExtractor {
     @Value("${google.maps.api-key}")
     private String googleMapsApiKey;
 
-    public JsonNode extractMetadata(MultipartFile imageFile, boolean includeAddress, boolean includeLandmarks, int landmarkRadius) throws Exception {
-        ObjectNode resultNode = extractBasicMetadata(imageFile);
+    public Metadata extractMetadata(MultipartFile imageFile, boolean includeAddress, boolean includeLandmarks, int landmarkRadius) throws Exception {
+        Metadata.MetadataDTOBuilder metadataBuilder = extractBasicMetadata(imageFile);
 
-        JsonNode locationNode = resultNode.get("location");
-        if (locationNode != null && !locationNode.isNull()) {
-            double lat = locationNode.get("latitude").asDouble();
-            double lng = locationNode.get("longitude").asDouble();
+        if (metadataBuilder.build().getLocation() != null) {
+            Location location = metadataBuilder.build().getLocation();
+            double lat = location.getLatitude();
+            double lng = location.getLongitude();
 
             if (includeAddress) {
                 String address = getAddressFromCoordinates(lat, lng);
-                ((ObjectNode) locationNode).put("address", address);
+                Location updatedLocation = Location.builder()
+                        .latitude(lat)
+                        .longitude(lng)
+                        .address(address)
+                        .build();
+                metadataBuilder.location(updatedLocation);
             }
 
             if (includeLandmarks) {
-                List<String> landmarks = getNearbyLandmarks(lat, lng, landmarkRadius);
-                ArrayNode landmarksNode = objectMapper.createArrayNode();
-                landmarks.forEach(landmarksNode::add);
-                resultNode.set("nearbyLandmarks", landmarksNode);
+                List<Landmark> landmarks = getNearbyLandmarks(lat, lng, landmarkRadius);
+                metadataBuilder.nearbyLandmarks(landmarks);
             }
         }
 
-        return resultNode;
+        return metadataBuilder.build();
     }
 
     public JsonNode extractAllMetadataTags(MultipartFile imageFile) throws Exception {
         ObjectNode resultNode = objectMapper.createObjectNode();
         try (InputStream input = imageFile.getInputStream()) {
-            Metadata metadata = ImageMetadataReader.readMetadata(input);
+            com.drew.metadata.Metadata metadata = ImageMetadataReader.readMetadata(input);
             for (Directory directory : metadata.getDirectories()) {
                 ObjectNode dirNode = objectMapper.createObjectNode();
                 for (Tag tag : directory.getTags()) {
@@ -71,56 +75,44 @@ public class MetadataExtractor {
         return resultNode;
     }
 
-    private ObjectNode extractBasicMetadata(MultipartFile imageFile) throws Exception {
-        ObjectNode result = objectMapper.createObjectNode();
+    private Metadata.MetadataDTOBuilder extractBasicMetadata(MultipartFile imageFile) throws Exception {
+        Metadata.MetadataDTOBuilder builder = Metadata.builder();
         try (InputStream input = imageFile.getInputStream()) {
-            Metadata metadata = ImageMetadataReader.readMetadata(input);
-            result.put("filename", imageFile.getOriginalFilename());
-            extractDateTime(metadata, result);
-            extractLocation(metadata, result);
-            extractDevice(metadata, result);
-        }
-        return result;
-    }
-
-    private void extractDateTime(Metadata metadata, ObjectNode result) {
-        ExifSubIFDDirectory dir = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory.class);
-        if (dir != null) {
-            Date date = dir.getDateOriginal();
-            if (date != null) {
-                String formatted = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(date);
-                result.put("captureDate", formatted);
+            com.drew.metadata.Metadata metadata = ImageMetadataReader.readMetadata(input);
+            builder.filename(imageFile.getOriginalFilename());
+            
+            // 날짜 추출
+            ExifSubIFDDirectory dir = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory.class);
+            if (dir != null) {
+                Date date = dir.getDateOriginal();
+                if (date != null) {
+                    String formatted = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(date);
+                    builder.captureDate(formatted);
+                }
+            }
+            
+            // 위치 추출
+            GpsDirectory gps = metadata.getFirstDirectoryOfType(GpsDirectory.class);
+            if (gps != null && gps.getGeoLocation() != null) {
+                Location location = Location.builder()
+                        .latitude(gps.getGeoLocation().getLatitude())
+                        .longitude(gps.getGeoLocation().getLongitude())
+                        .build();
+                builder.location(location);
+            }
+            
+            // 장치 정보 추출
+            ExifIFD0Directory deviceDir = metadata.getFirstDirectoryOfType(ExifIFD0Directory.class);
+            if (deviceDir != null) {
+                Metadata.DeviceInfoDTO deviceInfo = Metadata.DeviceInfoDTO.builder()
+                        .make(deviceDir.getString(ExifIFD0Directory.TAG_MAKE))
+                        .model(deviceDir.getString(ExifIFD0Directory.TAG_MODEL))
+                        .software(deviceDir.getString(ExifIFD0Directory.TAG_SOFTWARE))
+                        .build();
+                builder.deviceInfo(deviceInfo);
             }
         }
-    }
-
-    private void extractLocation(Metadata metadata, ObjectNode result) {
-        GpsDirectory gps = metadata.getFirstDirectoryOfType(GpsDirectory.class);
-        if (gps != null && gps.getGeoLocation() != null) {
-            ObjectNode loc = objectMapper.createObjectNode();
-            loc.put("latitude", gps.getGeoLocation().getLatitude());
-            loc.put("longitude", gps.getGeoLocation().getLongitude());
-            result.set("location", loc);
-        }
-    }
-
-    private void extractDevice(Metadata metadata, ObjectNode result) {
-        ExifIFD0Directory dir = metadata.getFirstDirectoryOfType(ExifIFD0Directory.class);
-        if (dir != null) {
-            ObjectNode device = objectMapper.createObjectNode();
-
-            if (dir.containsTag(ExifIFD0Directory.TAG_MAKE))
-                device.put("make", dir.getString(ExifIFD0Directory.TAG_MAKE));
-
-            if (dir.containsTag(ExifIFD0Directory.TAG_MODEL))
-                device.put("model", dir.getString(ExifIFD0Directory.TAG_MODEL));
-
-            if (dir.containsTag(ExifIFD0Directory.TAG_SOFTWARE))
-                device.put("software", dir.getString(ExifIFD0Directory.TAG_SOFTWARE));
-
-            if (device.size() > 0)
-                result.set("deviceInfo", device);
-        }
+        return builder;
     }
 
     private String getAddressFromCoordinates(double lat, double lng) {
@@ -141,24 +133,32 @@ public class MetadataExtractor {
         return "주소 정보 없음";
     }
 
-    private List<String> getNearbyLandmarks(double lat, double lng, int radius) {
+    private List<Landmark> getNearbyLandmarks(double lat, double lng, int radius) {
         String url = UriComponentsBuilder.fromHttpUrl("https://maps.googleapis.com/maps/api/place/nearbysearch/json")
                 .queryParam("location", lat + "," + lng)
                 .queryParam("radius", radius)
+                .queryParam("fields", "place_id,name,vicinity")
                 .queryParam("key", googleMapsApiKey)
                 .toUriString();
 
-        List<String> landmarks = new ArrayList<>();
+        List<Landmark> landmarks = new ArrayList<>();
 
         try {
             JsonNode response = restTemplate.getForObject(url, JsonNode.class);
             if (response.has("results")) {
                 for (JsonNode result : response.get("results")) {
-                    landmarks.add(result.get("name").asText());
+                    Landmark landmark = Landmark.builder()
+                            .id(result.has("place_id") ? result.get("place_id").asText() : null)
+                            .name(result.has("name") ? result.get("name").asText() : null)
+                            .build();
+                    landmarks.add(landmark);
                 }
             }
         } catch (Exception e) {
-            landmarks.add("조회 실패: " + e.getMessage());
+            landmarks.add(Landmark.builder()
+                    .id("error")
+                    .name("조회 실패: " + e.getMessage())
+                    .build());
         }
 
         return landmarks;
