@@ -19,6 +19,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.TimeZone;
 
 @Service
 @RequiredArgsConstructor
@@ -34,23 +35,23 @@ public class MetadataService {
         Metadata.MetadataBuilder builder = Metadata.builder();
         try (InputStream input = new ByteArrayInputStream(imageBytes)) {
             com.drew.metadata.Metadata meta = ImageMetadataReader.readMetadata(input);
-            // 날짜 추출
-            ExifSubIFDDirectory subDir = meta.getFirstDirectoryOfType(ExifSubIFDDirectory.class);
-            if (subDir != null) {
-                Date date = subDir.getDateOriginal();
-                if (date != null) {
-                    String formatted = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(date);
-                    builder.captureDate(formatted);
-                }
-            }
-            // 위치 추출
+            
+            // GPS 정보 추출
             GpsDirectory gps = meta.getFirstDirectoryOfType(GpsDirectory.class);
+            TimeZone timeZone = TimeZone.getDefault();
+            
             if (gps != null && gps.getGeoLocation() != null) {
+                double latitude = gps.getGeoLocation().getLatitude();
+                double longitude = gps.getGeoLocation().getLongitude();
+                
+                // 좌표 기반 시간대 가져오기
+                timeZone = getTimeZoneFromCoordinates(latitude, longitude);
+                
                 Location loc = Location.builder()
-                        .latitude(gps.getGeoLocation().getLatitude())
-                        .longitude(gps.getGeoLocation().getLongitude())
+                        .latitude(latitude)
+                        .longitude(longitude)
                         .build();
-                // 항상 주소 포함
+                // 주소 포함
                 String address = getAddressFromCoordinates(loc.getLatitude(), loc.getLongitude());
                 loc = Location.builder()
                         .latitude(loc.getLatitude())
@@ -58,12 +59,43 @@ public class MetadataService {
                         .address(address)
                         .build();
                 builder.location(loc);
-                // 항상 랜드마크 포함 (반경 1000)
+                // 랜드마크 포함 (반경 1000)
                 List<Landmark> landmarks = getNearbyLandmarks(loc.getLatitude(), loc.getLongitude(), 1000);
                 builder.nearbyLandmarks(landmarks);
             }
+            
+            // 날짜 추출 - 위에서 결정된 시간대 사용
+            ExifSubIFDDirectory subDir = meta.getFirstDirectoryOfType(ExifSubIFDDirectory.class);
+            if (subDir != null) {
+                Date date = subDir.getDateOriginal(timeZone);
+                if (date != null) {
+                    String formatted = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(date);
+                    builder.captureDate(formatted);
+                }
+            }
         }
         return builder.build();
+    }
+    
+    // 좌표로부터 시간대 정보를 가져오는 메소드
+    private TimeZone getTimeZoneFromCoordinates(double lat, double lng) {
+        String url = UriComponentsBuilder.fromHttpUrl("https://maps.googleapis.com/maps/api/timezone/json")
+                .queryParam("location", lat + "," + lng)
+                .queryParam("timestamp", System.currentTimeMillis() / 1000)
+                .queryParam("key", googleMapsApiKey)
+                .toUriString();
+                
+        try {
+            JsonNode response = restTemplate.getForObject(url, JsonNode.class);
+            if (response != null && response.has("timeZoneId")) {
+                String timeZoneId = response.get("timeZoneId").asText();
+                return TimeZone.getTimeZone(timeZoneId);
+            }
+        } catch (Exception e) {
+            System.err.println("시간대 조회 실패: " + e.getMessage());
+        }
+        
+        return TimeZone.getDefault();
     }
     
     private String getAddressFromCoordinates(double lat, double lng) {
