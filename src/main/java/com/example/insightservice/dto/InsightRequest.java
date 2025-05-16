@@ -10,6 +10,7 @@ public class InsightRequest {
 
     @Data
     public static class ImageData {
-        private Metadata metadata;
+        private String id;
+        private String url;
     }
 }
