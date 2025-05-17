@@ -45,7 +45,7 @@ public class PromptBuilder {
                Your final output must be a JSON object with the following structure:
             
                {
-                 "imageDescriptions": [
+                 "images": [
                    {
                      "index": <number>,
                      "description": <string>
@@ -53,7 +53,11 @@ public class PromptBuilder {
                    ...
                  ],
                  "overallDaySummary": <string>,
-            	     "language": <string>
+                 "questions": [
+                   <string>,
+                   ...
+                 ],
+            	 "language": <string>
                }
             
                - The "language" field should be set based on the "user_locale" provided in the input.
