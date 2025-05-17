@@ -100,15 +100,15 @@ public class PromptBuilder {
             String landmarks = lmList.isEmpty() ? "명소 정보 없음" : String.join(", ", lmList);
             String promptText = String.format("Captured at %s in %s. Landmarks: %s", time, location, landmarks);
 
-            byte[] imgBytes = imageBytesMap.get(image.getId());
-            String base64EncodedImage = (imgBytes != null) ? Base64.getEncoder().encodeToString(imgBytes) : "";
+            byte[] originalBytes = imageBytesMap.get(image.getId());
+            byte[] compressedBytes = ImageCompressor.compressImage(originalBytes);
+            String base64EncodedImage = (compressedBytes != null) ? Base64.getEncoder().encodeToString(compressedBytes) : "";
 
-            // 별도의 Part로 text와 inline_data 생성 (null 필드는 직렬화되지 않음)
             GeminiPromptRequest.Part textPart = new GeminiPromptRequest.Part();
             textPart.setText(promptText);
 
             GeminiPromptRequest.Part inlineDataPart = new GeminiPromptRequest.Part();
-            inlineDataPart.setInline_data(new GeminiPromptRequest.InlineData("image/jpeg", base64EncodedImage));
+            inlineDataPart.setInline_data(new GeminiPromptRequest.InlineData("image/webp", base64EncodedImage));
 
             List<GeminiPromptRequest.Part> parts = new ArrayList<>();
             parts.add(textPart);
