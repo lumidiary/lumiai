@@ -33,6 +33,15 @@ public class InsightService {
             Metadata metadata = metadataService.extractMetadata(imageBytes);
             metadataMap.put(image.getId(), metadata);
         }
-        return geminiApiClient.requestToGemini(request, metadataMap, imageBytesMap);
+        GeminiResponse response = geminiApiClient.requestToGemini(request, metadataMap, imageBytesMap);
+        
+        // 요청 시 이미지 순서대로 각 이미지 설명에 ID와 metadata 추가
+        for (int i = 0; i < request.getImages().size() && i < response.getImages().size(); i++) {
+            InsightRequest.ImageData image = request.getImages().get(i);
+            GeminiResponse.ImageDescription imgDesc = response.getImages().get(i);
+            imgDesc.setImageId(image.getId());
+            imgDesc.setMetadata(metadataMap.get(image.getId()));
+        }
+        return response;
     }
 }
