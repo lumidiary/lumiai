@@ -59,8 +59,8 @@ public class MetadataService {
                         .address(address)
                         .build();
                 builder.location(loc);
-                // 랜드마크 포함 (반경 1000)
-                List<Landmark> landmarks = getNearbyLandmarks(loc.getLatitude(), loc.getLongitude(), 1000);
+                // 랜드마크 포함 (반경 250)
+                List<Landmark> landmarks = getNearbyLandmarks(loc.getLatitude(), loc.getLongitude(), 250);
                 builder.nearbyLandmarks(landmarks);
             }
             
