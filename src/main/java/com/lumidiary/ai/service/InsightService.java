@@ -1,9 +1,9 @@
-package com.example.insightservice.service;
+package com.lumidiary.ai.service;
 
-import com.example.insightservice.dto.GeminiResponse;
-import com.example.insightservice.dto.InsightRequest;
-import com.example.insightservice.dto.Metadata;
-import com.example.insightservice.integration.GeminiApiClient;
+import com.lumidiary.ai.dto.GeminiResponse;
+import com.lumidiary.ai.dto.InsightRequest;
+import com.lumidiary.ai.dto.Metadata;
+import com.lumidiary.ai.integration.GeminiApiClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;

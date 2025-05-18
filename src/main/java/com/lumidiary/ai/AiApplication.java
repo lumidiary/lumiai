@@ -1,13 +1,13 @@
-package com.example.insightservice;
+package com.lumidiary.ai;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class Myproject1Application {
+public class AiApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(Myproject1Application.class, args);
+        SpringApplication.run(AiApplication.class, args);
     }
 
 }

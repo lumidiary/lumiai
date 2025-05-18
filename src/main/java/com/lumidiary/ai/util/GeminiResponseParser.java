@@ -1,4 +1,4 @@
-package com.example.insightservice.util;
+package com.lumidiary.ai.util;
 
 import java.util.*;
 

@@ -8,11 +8,11 @@
         <version>3.4.5</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
-    <groupId>com.example</groupId>
-    <artifactId>myproject1</artifactId>
+    <groupId>com.lumidiary</groupId>
+    <artifactId>ai</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>myproject1</name>
-    <description>myproject1</description>
+    <name>Lumi AI</name>
+    <description>AI Service for Lumi</description>
     <url/>
     <licenses>
         <license/>

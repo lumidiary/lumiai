@@ -1,4 +1,4 @@
-package com.example.insightservice.dto;
+package com.lumidiary.ai.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;

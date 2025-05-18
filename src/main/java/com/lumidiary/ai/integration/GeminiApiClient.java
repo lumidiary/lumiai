@@ -1,9 +1,10 @@
-package com.example.insightservice.integration;
+package com.lumidiary.ai.integration;
 
-import com.example.insightservice.dto.GeminiPromptRequest;
-import com.example.insightservice.dto.GeminiResponse;
-import com.example.insightservice.dto.InsightRequest;
-import com.example.insightservice.util.PromptBuilder;
+import com.lumidiary.ai.dto.GeminiPromptRequest;
+import com.lumidiary.ai.dto.GeminiResponse;
+import com.lumidiary.ai.dto.InsightRequest;
+import com.lumidiary.ai.dto.Metadata;
+import com.lumidiary.ai.util.PromptBuilder;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +26,7 @@ public class GeminiApiClient {
     
     // New method signature: now accepts metadata and image bytes maps.
     public GeminiResponse requestToGemini(InsightRequest input, 
-                                          Map<String, com.example.insightservice.dto.Metadata> metadataMap,
+                                          Map<String, Metadata> metadataMap,
                                           Map<String, byte[]> imageBytesMap) throws IOException {
         GeminiPromptRequest promptRequest = PromptBuilder.build(input, metadataMap, imageBytesMap);
         String json = objectMapper.writeValueAsString(promptRequest);

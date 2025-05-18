@@ -1,4 +1,4 @@
-package com.example.insightservice.dto;
+package com.lumidiary.ai.dto;
 
 import lombok.Data;
 import lombok.Builder;

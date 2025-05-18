@@ -1,4 +1,4 @@
-package com.example.insightservice.config;
+package com.lumidiary.ai.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

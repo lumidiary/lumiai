@@ -1,10 +1,10 @@
-package com.example.insightservice;
+package com.lumidiary.ai;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class Myproject1ApplicationTests {
+class AiApplicationTests {
 
     @Test
     void contextLoads() {

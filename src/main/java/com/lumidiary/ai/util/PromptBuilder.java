@@ -1,8 +1,8 @@
-package com.example.insightservice.util;
+package com.lumidiary.ai.util;
 
-import com.example.insightservice.dto.GeminiPromptRequest;
-import com.example.insightservice.dto.InsightRequest;
-import com.example.insightservice.dto.Metadata;
+import com.lumidiary.ai.dto.GeminiPromptRequest;
+import com.lumidiary.ai.dto.InsightRequest;
+import com.lumidiary.ai.dto.Metadata;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;

@@ -1,4 +1,4 @@
-package com.example.insightservice.dto;
+package com.lumidiary.ai.dto;
 
 import lombok.Data;
 import lombok.Builder;
@@ -9,7 +9,8 @@ import lombok.AllArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Landmark {
-    private String id;
-    private String name;
+public class Location {
+    private double latitude;
+    private double longitude;
+    private String address;
 }

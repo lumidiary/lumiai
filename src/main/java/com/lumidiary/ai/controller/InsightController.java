@@ -1,8 +1,8 @@
-package com.example.insightservice.controller;
+package com.lumidiary.ai.controller;
 
-import com.example.insightservice.dto.GeminiResponse;
-import com.example.insightservice.dto.InsightRequest;
-import com.example.insightservice.service.InsightService;
+import com.lumidiary.ai.dto.GeminiResponse;
+import com.lumidiary.ai.dto.InsightRequest;
+import com.lumidiary.ai.service.InsightService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

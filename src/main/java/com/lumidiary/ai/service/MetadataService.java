@@ -1,11 +1,11 @@
-package com.example.insightservice.service;
+package com.lumidiary.ai.service;
 
 import com.drew.imaging.ImageMetadataReader;
 import com.drew.metadata.exif.ExifSubIFDDirectory;
 import com.drew.metadata.exif.GpsDirectory;
-import com.example.insightservice.dto.Landmark;
-import com.example.insightservice.dto.Location;
-import com.example.insightservice.dto.Metadata;
+import com.lumidiary.ai.dto.Landmark;
+import com.lumidiary.ai.dto.Location;
+import com.lumidiary.ai.dto.Metadata;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;

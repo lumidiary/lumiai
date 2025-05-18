@@ -1,4 +1,4 @@
-package com.example.insightservice.util;
+package com.lumidiary.ai.util;
 
 import com.sksamuel.scrimage.ImmutableImage;
 import com.sksamuel.scrimage.webp.WebpWriter;
