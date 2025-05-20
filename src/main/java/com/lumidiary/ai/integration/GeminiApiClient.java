@@ -24,11 +24,10 @@ public class GeminiApiClient {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     
-    // New method signature: now accepts metadata and image bytes maps.
-    public GeminiResponse requestToGemini(InsightRequest input, 
+    public GeminiResponse requestToGemini(InsightRequest input,
                                           Map<String, Metadata> metadataMap,
                                           Map<String, byte[]> imageBytesMap) throws IOException {
-        GeminiPromptRequest promptRequest = PromptBuilder.build(input, metadataMap, imageBytesMap);
+        GeminiPromptRequest promptRequest = PromptBuilder.buidVisionPrompt(input, metadataMap, imageBytesMap);
         String json = objectMapper.writeValueAsString(promptRequest);
 
         // 요청 본문 출력
@@ -61,7 +60,29 @@ public class GeminiApiClient {
             return objectMapper.readValue(cleaned, GeminiResponse.class);
         }
     }
-    
+
+    public String sendPromptRaw(GeminiPromptRequest request) throws IOException {
+        String json = objectMapper.writeValueAsString(request);
+
+        // 요청 본문 출력
+        System.out.println("🎯 Gemini 요청 JSON = \n" + json);
+
+        OkHttpClient client = new OkHttpClient();
+        RequestBody body = RequestBody.create(json, MediaType.get("application/json; charset=utf-8"));
+        Request httpRequest = new Request.Builder()
+                .url(GEMINI_URL + apiKey)
+                .post(body)
+                .build();
+
+        try (Response response = client.newCall(httpRequest).execute()) {
+            if (!response.isSuccessful()) {
+                String errorBody = response.body() != null ? response.body().string() : "";
+                throw new IOException("Gemini API 호출 실패: " + response + " Error: " + errorBody);
+            }
+            return response.body().string();
+        }
+    }
+
     private static final String GEMINI_URL =
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent?key=";
 }
