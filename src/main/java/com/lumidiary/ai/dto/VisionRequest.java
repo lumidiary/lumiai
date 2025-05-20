@@ -4,7 +4,7 @@ import lombok.Data;
 import java.util.List;
 
 @Data
-public class InsightRequest {
+public class VisionRequest {
     private List<ImageData> images;
     private String user_locale;
 

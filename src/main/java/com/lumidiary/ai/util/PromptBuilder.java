@@ -2,7 +2,7 @@ package com.lumidiary.ai.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lumidiary.ai.dto.GeminiPromptRequest;
-import com.lumidiary.ai.dto.InsightRequest;
+import com.lumidiary.ai.dto.VisionRequest;
 import com.lumidiary.ai.dto.Metadata;
 import com.lumidiary.ai.dto.DigestRequestForPrompt;
 import java.io.BufferedReader;
@@ -41,7 +41,7 @@ public class PromptBuilder {
         }
     }
     
-    public static GeminiPromptRequest buidVisionPrompt(InsightRequest request,
+    public static GeminiPromptRequest buidVisionPrompt(VisionRequest request,
                                                        Map<String, Metadata> metadataMap,
                                                        Map<String, byte[]> imageBytesMap) {
         List<GeminiPromptRequest.Content> contents = new ArrayList<>();
@@ -50,7 +50,7 @@ public class PromptBuilder {
                 List.of(new GeminiPromptRequest.Part(SYSTEM_PROMPTS.get(PromptType.VISION)))
         ));
 
-        for (InsightRequest.ImageData image : request.getImages()) {
+        for (VisionRequest.ImageData image : request.getImages()) {
             Metadata metadata = metadataMap.get(image.getId());
             String time = metadata != null && metadata.getCaptureDate() != null
                     ? metadata.getCaptureDate() : "정보 없음";

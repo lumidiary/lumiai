@@ -2,7 +2,7 @@ package com.lumidiary.ai.integration;
 
 import com.lumidiary.ai.dto.GeminiPromptRequest;
 import com.lumidiary.ai.dto.GeminiResponse;
-import com.lumidiary.ai.dto.InsightRequest;
+import com.lumidiary.ai.dto.VisionRequest;
 import com.lumidiary.ai.dto.Metadata;
 import com.lumidiary.ai.util.PromptBuilder;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -24,7 +24,7 @@ public class GeminiApiClient {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     
-    public GeminiResponse requestToGemini(InsightRequest input,
+    public GeminiResponse requestToGemini(VisionRequest input,
                                           Map<String, Metadata> metadataMap,
                                           Map<String, byte[]> imageBytesMap) throws IOException {
         GeminiPromptRequest promptRequest = PromptBuilder.buidVisionPrompt(input, metadataMap, imageBytesMap);

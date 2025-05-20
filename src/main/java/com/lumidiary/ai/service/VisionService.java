@@ -1,7 +1,7 @@
 package com.lumidiary.ai.service;
 
 import com.lumidiary.ai.dto.GeminiResponse;
-import com.lumidiary.ai.dto.InsightRequest;
+import com.lumidiary.ai.dto.VisionRequest;
 import com.lumidiary.ai.dto.Metadata;
 import com.lumidiary.ai.integration.GeminiApiClient;
 import lombok.RequiredArgsConstructor;
@@ -12,17 +12,17 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
-public class InsightService {
+public class VisionService {
 
     private final MetadataService metadataService;
     private final GeminiApiClient geminiApiClient;
     private final RestTemplate restTemplate;
 
-    public GeminiResponse analyze(InsightRequest request) throws Exception {
+    public GeminiResponse analyze(VisionRequest request) throws Exception {
         Map<String, Metadata> metadataMap = new HashMap<>();
         Map<String, byte[]> imageBytesMap = new HashMap<>();
 
-        for (InsightRequest.ImageData image : request.getImages()) {
+        for (VisionRequest.ImageData image : request.getImages()) {
             byte[] imageBytes = restTemplate.getForObject(image.getUrl(), byte[].class);
             // 이미지 데이터가 반드시 존재해야 함
             if (imageBytes == null || imageBytes.length == 0) {
@@ -37,7 +37,7 @@ public class InsightService {
         
         // 요청 시 이미지 순서대로 각 이미지 설명에 ID와 metadata 추가
         for (int i = 0; i < request.getImages().size() && i < response.getImages().size(); i++) {
-            InsightRequest.ImageData image = request.getImages().get(i);
+            VisionRequest.ImageData image = request.getImages().get(i);
             GeminiResponse.ImageDescription imgDesc = response.getImages().get(i);
             imgDesc.setImageId(image.getId());
             imgDesc.setMetadata(metadataMap.get(image.getId()));
