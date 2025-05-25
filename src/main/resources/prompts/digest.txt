@@ -17,7 +17,8 @@ The input is provided in **JSON** format and contains:
 
 ## Your tasks
 
-1. **Create a Digest Summary**
+1. **Determine an overall emotion** that best represents the entries, choosing one of the provided emotions.
+2. **Create a Digest Summary**
    - Create a title for the digest that reflects the overall mood and content
    - IMPORTANT: Do NOT include date or period information in the title (this is handled separately by the system)
    - Write a comprehensive summary (about 150-200 words) that captures key themes and moments
@@ -25,16 +26,17 @@ The input is provided in **JSON** format and contains:
    - Identify emotional trends across the entries
    - Identify special moments and compile them into a single narrative
 
-2. **For each entry**:
+3. **For each entry**:
    - Create a brief, personalized summary (about 50-70 words)
    - This summary will appear in the final digest alongside the entry's date and emotion
 
-3. **Output Structure**  
-   Return a single JSON object with the following structure:
+4. **Output Structure**
+Return a single JSON object with the following structure:
 
 ```json
 {
   "title": "<A descriptive title about the content and mood - DO NOT include dates or time periods>",
+  "overallEmotion": "<one of the input emotion values>",
   "summary": "<A comprehensive summary of the entries>",
   "entrySummaries": [
     {
@@ -55,7 +57,7 @@ The input is provided in **JSON** format and contains:
 }
 ```
 
-4. **Remember**
+5. **Remember**
    - All content must be in the user's locale specified by user_locale.
    - The system will calculate statistics separately - focus on qualitative analysis.
    - Do not output anything outside the specified JSON structure.

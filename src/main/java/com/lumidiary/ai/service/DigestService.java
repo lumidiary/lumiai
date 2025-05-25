@@ -120,7 +120,10 @@ public class DigestService {
         if (responseNode.has("summary")) {
             response.setSummary(responseNode.get("summary").asText());
         }
-        
+        if (responseNode.has("overallEmotion")) {
+            response.setOverallEmotion(responseNode.get("overallEmotion").asText());
+        }
+
         // AI Insights 설정
         DigestResponse.AIInsights aiInsights = new DigestResponse.AIInsights();
         JsonNode insightsNode = responseNode.get("aiInsights");
