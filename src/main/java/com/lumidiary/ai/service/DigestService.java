@@ -34,15 +34,9 @@ public class DigestService {
         // JSON 응답 파싱
         JsonNode responseNode = parseResponseJson(jsonResponse);
         
-        // 직접 계산하는 통계 정보 생성
-        DigestResponse.Statistics statistics = calculateStatistics(request.getEntries());
-        
-        // 가장 많이 나타난 감정 계산
-        String overallEmotion = calculateOverallEmotion(statistics.getEmotionCounts());
-        
         // 최종 응답 조립
-        DigestResponse response = assembleResponse(responseNode, request.getEntries(), statistics, overallEmotion);
-        
+        DigestResponse response = assembleResponse(responseNode, request.getEntries());
+
         // 요청의 ID를 응답에 설정
         response.setId(request.getId());
         
@@ -109,62 +103,7 @@ public class DigestService {
         }
     }
     
-    /**
-     * 감정 통계 및 위치 정보를 계산합니다.
-     */
-    private DigestResponse.Statistics calculateStatistics(List<DigestEntry> entries) {
-        // 감정 카운트 계산
-        Map<String, Integer> emotionCounts = new HashMap<>();
-        for (DigestEntry entry : entries) {
-            String emotion = entry.getEmotion();
-            if (emotion != null && !emotion.isEmpty()) {
-                emotionCounts.put(emotion, emotionCounts.getOrDefault(emotion, 0) + 1);
-            }
-        }
-        
-        // 방문 위치 정보 추출 - 이미지 설명에서 위경도 정보 수집
-        List<DigestResponse.Location> visitedLocations = new ArrayList<>();
-        for (DigestEntry entry : entries) {
-            if (entry.getImageDescriptions() != null) {
-                for (DigestEntry.ImageDescription imgDesc : entry.getImageDescriptions()) {
-                    // 위경도 정보가 있는 경우에만 추가
-                    DigestResponse.Location location = new DigestResponse.Location();
-                    location.setLatitude(imgDesc.getLatitude());
-                    location.setLongitude(imgDesc.getLongitude());
-                    visitedLocations.add(location);
-                }
-            }
-        }
-        
-        // 통계 객체 조립
-        DigestResponse.Statistics statistics = new DigestResponse.Statistics();
-        statistics.setEmotionCounts(emotionCounts);
-        statistics.setVisitedLocations(visitedLocations);
-        
-        return statistics;
-    }
-    
-    /**
-     * 가장 자주 나타난 감정을 계산합니다.
-     */
-    private String calculateOverallEmotion(Map<String, Integer> emotionCounts) {
-        if (emotionCounts.isEmpty()) {
-            return "neutral";
-        }
-        
-        return emotionCounts.entrySet().stream()
-                .max(Map.Entry.comparingByValue())
-                .map(Map.Entry::getKey)
-                .orElse("neutral");
-    }
-    
-    /**
-     * Gemini 응답과 계산된 통계를 조합하여 최종 응답을 생성합니다.
-     */
-    private DigestResponse assembleResponse(JsonNode responseNode, 
-                                           List<DigestEntry> originalEntries,
-                                           DigestResponse.Statistics statistics,
-                                           String overallEmotion) {
+    private DigestResponse assembleResponse(JsonNode responseNode, List<DigestEntry> originalEntries) {
         DigestResponse response = new DigestResponse();
         
         // 시작일과 종료일을 계산하여 period 설정
@@ -223,10 +162,6 @@ public class DigestService {
         }
         response.setAiInsights(aiInsights);
         
-        // 통계 및 계산된 감정 설정
-        response.setStatistics(statistics);
-        response.setOverallEmotion(overallEmotion);
-        
         // entrySummaries 파싱 및 매핑
         Map<Integer, String> entrySummaryMap = new HashMap<>();
         JsonNode entrySummariesNode = responseNode.get("entrySummaries");
@@ -245,10 +180,8 @@ public class DigestService {
         for (int i = 0; i < originalEntries.size(); i++) {
             DigestEntry entry = originalEntries.get(i);
             DigestResponse.EntryDigest digest = new DigestResponse.EntryDigest();
-            digest.setId(entry.getId()); // 원본 ID 그대로 사용
-            digest.setDate(entry.getDate());
-            digest.setEmotion(entry.getEmotion());
-            
+            digest.setId(entry.getId());
+
             // LLM에서 생성된 요약이 있으면 사용, 없으면 overallDaySummary 사용
             String summary = entrySummaryMap.getOrDefault(i, entry.getOverallDaySummary());
             digest.setSummary(summary);
@@ -260,9 +193,6 @@ public class DigestService {
         return response;
     }
     
-    /**
-     * 다이제스트 기간을 계산합니다 (시작일과 종료일을 포함하는 객체).
-     */
     private DigestResponse.Period calculatePeriod(List<DigestEntry> entries) {
         DigestResponse.Period period = new DigestResponse.Period();
         
