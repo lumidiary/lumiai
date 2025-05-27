@@ -1,6 +1,10 @@
 server:
   port: 8080
 
+spring:
+  application:
+    name: lumiai  # AI 서비스명
+
 gemini:
   api-key: ${GEMINI_API_KEY:YOUR_GEMINI_API_KEY_HERE}
 
@@ -8,3 +12,34 @@ google:
   maps:
     api-key: ${GOOGLE_MAPS_API_KEY:YOUR_GOOGLE_MAPS_API_KEY_HERE}
 
+callback:
+  #digest: http://localhost:8081/api/callback/digest
+  #diary: http://localhost:8081/api/callback/diary
+  digest: https://webhook.site/faa08971-df96-4069-9057-bb6b525575b6/digest
+  diary: https://webhook.site/faa08971-df96-4069-9057-bb6b525575b6/diary
+
+oci:
+  tenancy:
+    ocid: ${OCI_TENANCY_OCID:ocid1.tenancy.oc1..aaaaaaaa7ojitcbuim62vslmfrxlggwmy2gogk7oxrldua3z424vvqypkjfq}
+  user:
+    ocid: ${OCI_USER_OCID:ocid1.user.oc1..aaaaaaaazkay3ftjhhmtum35v2yu33miwdp5zabqhf7xvaqisubahhni3wuq}
+  fingerprint: ${OCI_FINGERPRINT:45:0f:7c:e3:14:8b:8b:93:be:4e:69:97:86:9e:07:15}
+  keyFile: ${OCI_KEY_FILE:${user.home}/.oci/private_key.pem}
+  keyPassphrase: ${OCI_KEY_PASSPHRASE:}
+  region: ${OCI_REGION:ap-chuncheon-1}
+  configFilePath: ${OCI_CONFIG_FILE:${user.home}/.oci/config}
+  objectstorage:
+    namespace: ax5ipvulwvc1
+    bucket: bucket-20250507-1731
+    uri-prefix: https://ax5ipvulwvc1.objectstorage.ap-chuncheon-1.oci.customer-oci.com
+  queue:
+    enabled: true
+    id: ocid1.queue.oc1.ap-chuncheon-1.amaaaaaabtgrhfyaiwmflsupo2zjy2xlyqdvbvsh2i54jdqctcfaumybytaq
+    channels:
+      default: diary
+      digest: digest
+
+logging:
+  level:
+    root: INFO
+    com.lumidiary.ai: DEBUG

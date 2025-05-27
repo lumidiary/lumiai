@@ -266,4 +266,13 @@ public class DigestService {
         
         return period;
     }
+
+    public Object process(DigestRequest request) {
+        try {
+            return this.createDigest(request);
+        } catch (IOException e) {
+            throw new RuntimeException("Digest 생성 중 오류 발생", e);
+        }
+    }
+
 }

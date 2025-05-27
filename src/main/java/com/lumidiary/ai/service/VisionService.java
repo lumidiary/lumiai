@@ -44,4 +44,12 @@ public class VisionService {
         }
         return response;
     }
+    public Object process(VisionRequest request) {
+        try {
+            return this.analyze(request);
+        } catch (Exception e) {
+            throw new RuntimeException("Vision 분석 중 오류 발생", e);
+        }
+    }
+
 }
