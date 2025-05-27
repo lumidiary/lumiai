@@ -22,7 +22,6 @@ public class CallbackSender {
             restTemplate.postForEntity(url, response, Void.class);
         } catch (Exception e) {
             System.err.println("Callback failed: " + e.getMessage());
-            // TODO: 재시도 로직 추가 가능
         }
     }
 }

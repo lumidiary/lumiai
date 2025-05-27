@@ -15,6 +15,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
+import com.lumidiary.ai.queue.CallbackSender;
 
 @Service
 @RequiredArgsConstructor
@@ -22,38 +23,42 @@ public class DigestService {
 
     private final GeminiApiClient geminiApiClient;
     private final ObjectMapper objectMapper;
+    private final CallbackSender callbackSender;
 
     public DigestResponse createDigest(DigestRequest request) throws IOException {
         // Gemini에게 보낼 요청 객체 생성
         DigestRequestForPrompt requestForPrompt = preparePromptRequest(request);
-        
+
         // Gemini API 호출
         GeminiPromptRequest prompt = PromptBuilder.buildDigestPrompt(requestForPrompt, objectMapper);
         String jsonResponse = geminiApiClient.sendPromptRaw(prompt);
-        
+
         // JSON 응답 파싱
         JsonNode responseNode = parseResponseJson(jsonResponse);
-        
+
         // 최종 응답 조립
         DigestResponse response = assembleResponse(responseNode, request.getEntries());
 
         // 요청의 ID를 응답에 설정
         response.setId(request.getId());
-        
+
+        // CallbackSender로 webhook 전송
+        callbackSender.send("digest", new ResponseDTO(true, "다이제스트 생성 성공", response));
+
         return response;
     }
-    
+
     private DigestRequestForPrompt preparePromptRequest(DigestRequest request) {
         List<DigestEntryForPrompt> entriesForPrompt = new ArrayList<>();
-        
+
         for (int i = 0; i < request.getEntries().size(); i++) {
             DigestEntry originalEntry = request.getEntries().get(i);
-            
+
             // 원본 엔트리에서 id, date를 제외한 복사본 생성
             DigestEntryForPrompt entryForPrompt = new DigestEntryForPrompt();
             entryForPrompt.setIndex(i);
             entryForPrompt.setEmotion(originalEntry.getEmotion());
-            
+
             // 이미지 설명 변환 (위도/경도 정보 제외)
             if (originalEntry.getImageDescriptions() != null) {
                 List<DigestEntryForPrompt.ImageDescriptionForPrompt> promptImgDescs = new ArrayList<>();
@@ -65,20 +70,20 @@ public class DigestService {
                 }
                 entryForPrompt.setImageDescriptions(promptImgDescs);
             }
-            
+
             entryForPrompt.setOverallDaySummary(originalEntry.getOverallDaySummary());
             entryForPrompt.setQuestions(originalEntry.getQuestions());
-            
+
             entriesForPrompt.add(entryForPrompt);
         }
-        
+
         DigestRequestForPrompt requestForPrompt = new DigestRequestForPrompt();
         requestForPrompt.setEntries(entriesForPrompt);
         requestForPrompt.setUser_locale(request.getUser_locale());
-        
+
         return requestForPrompt;
     }
-    
+
     private JsonNode parseResponseJson(String jsonResponse) throws IOException {
         try {
             // Gemini 응답에서 실제 콘텐츠(text) 추출
@@ -88,35 +93,35 @@ public class DigestService {
                     .path("content")
                     .path("parts").get(0)
                     .path("text").asText();
-                
+
             // JSON 포맷이 코드 블록으로 감싸져 있을 수 있으므로 제거
             String cleaned = rawText
                     .replaceAll("(?s)```json\\s*", "")
                     .replaceAll("```", "").trim();
-                
+
             System.out.println("원본 Gemini 응답: " + cleaned);
-                
+
             // 응답 텍스트를 JsonNode로 파싱
             return objectMapper.readTree(cleaned);
         } catch (Exception e) {
             throw new IOException("Failed to parse Gemini response: " + e.getMessage() + "\nFull response: " + jsonResponse, e);
         }
     }
-    
+
     private DigestResponse assembleResponse(JsonNode responseNode, List<DigestEntry> originalEntries) {
         DigestResponse response = new DigestResponse();
-        
+
         // 시작일과 종료일을 계산하여 period 설정
         DigestResponse.Period period = calculatePeriod(originalEntries);
         response.setPeriod(period);
-        
+
         // Gemini로부터 얻은 정보 설정
         if (responseNode.has("title")) {
             response.setTitle(responseNode.get("title").asText());
         } else {
             response.setTitle("다이제스트 요약");
         }
-        
+
         if (responseNode.has("summary")) {
             response.setSummary(responseNode.get("summary").asText());
         }
@@ -131,11 +136,11 @@ public class DigestService {
             if (insightsNode.has("activity")) {
                 aiInsights.setActivity(insightsNode.get("activity").asText());
             }
-            
+
             if (insightsNode.has("emotionTrend")) {
                 aiInsights.setEmotionTrend(insightsNode.get("emotionTrend").asText());
             }
-            
+
             // specialMoment를 문자열로 처리
             if (insightsNode.has("specialMoment")) {
                 JsonNode specialMomentNode = insightsNode.get("specialMoment");
@@ -147,7 +152,7 @@ public class DigestService {
                     aiInsights.setSpecialMoment(specialMomentNode.asText());
                 }
             }
-            
+
             // specialMoments 배열이 있는 경우 (이전 형식 호환성)
             JsonNode specialMomentsNode = insightsNode.get("specialMoments");
             if (specialMomentsNode != null && specialMomentsNode.isArray() && specialMomentsNode.size() > 0) {
@@ -164,7 +169,7 @@ public class DigestService {
             }
         }
         response.setAiInsights(aiInsights);
-        
+
         // entrySummaries 파싱 및 매핑
         Map<Integer, String> entrySummaryMap = new HashMap<>();
         JsonNode entrySummariesNode = responseNode.get("entrySummaries");
@@ -177,7 +182,7 @@ public class DigestService {
                 }
             }
         }
-        
+
         // 개별 항목 다이제스트 생성
         List<DigestResponse.EntryDigest> entryDigests = new ArrayList<>();
         for (int i = 0; i < originalEntries.size(); i++) {
@@ -188,32 +193,32 @@ public class DigestService {
             // LLM에서 생성된 요약이 있으면 사용, 없으면 overallDaySummary 사용
             String summary = entrySummaryMap.getOrDefault(i, entry.getOverallDaySummary());
             digest.setSummary(summary);
-            
+
             entryDigests.add(digest);
         }
         response.setEntries(entryDigests);
-        
+
         return response;
     }
-    
+
     private DigestResponse.Period calculatePeriod(List<DigestEntry> entries) {
         DigestResponse.Period period = new DigestResponse.Period();
-        
+
         if (entries == null || entries.isEmpty()) {
             period.setStart("");
             period.setEnd("");
             return period;
         }
-        
+
         DateTimeFormatter outputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         LocalDate earliestDate = null;
         LocalDate latestDate = null;
-        
+
         for (DigestEntry entry : entries) {
             try {
                 if (entry.getDate() != null && !entry.getDate().isEmpty()) {
                     LocalDate entryDate;
-                    
+
                     // ISO 8601 날짜 시간 형식 (2025-03-21T11:05:00+09:00) 처리
                     if (entry.getDate().contains("T")) {
                         // OffsetDateTime, ZonedDateTime, LocalDateTime 시도
@@ -226,7 +231,7 @@ public class DigestService {
                                 entryDate = zonedDateTime.toLocalDate();
                             } catch (DateTimeParseException e2) {
                                 try {
-                                    LocalDateTime localDateTime = LocalDateTime.parse(entry.getDate(), 
+                                    LocalDateTime localDateTime = LocalDateTime.parse(entry.getDate(),
                                             DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
                                     entryDate = localDateTime.toLocalDate();
                                 } catch (DateTimeParseException e3) {
@@ -239,11 +244,11 @@ public class DigestService {
                         // 단순 날짜 형식 (yyyy-MM-dd)
                         entryDate = LocalDate.parse(entry.getDate(), outputFormatter);
                     }
-                    
+
                     if (earliestDate == null || entryDate.isBefore(earliestDate)) {
                         earliestDate = entryDate;
                     }
-                    
+
                     if (latestDate == null || entryDate.isAfter(latestDate)) {
                         latestDate = entryDate;
                     }
@@ -254,16 +259,16 @@ public class DigestService {
                 continue;
             }
         }
-        
+
         if (earliestDate == null || latestDate == null) {
             period.setStart("");
             period.setEnd("");
             return period;
         }
-        
+
         period.setStart(earliestDate.format(outputFormatter));
         period.setEnd(latestDate.format(outputFormatter));
-        
+
         return period;
     }
 
@@ -276,3 +281,4 @@ public class DigestService {
     }
 
 }
+
