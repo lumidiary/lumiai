@@ -1,6 +1,5 @@
 package com.lumidiary.ai.queue;
 
-import com.lumidiary.ai.dto.ResponseDTO;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
@@ -16,12 +15,21 @@ public class CallbackSender {
     @Value("${callback.diary}")
     private String diaryCallbackUrl;
 
-    public void send(String channel, ResponseDTO response) {
-        String url = channel.equals("digest") ? digestCallbackUrl : diaryCallbackUrl;
+    /**
+     * digest → digestCallbackUrl
+     * diary 또는 vision → diaryCallbackUrl 사용
+     */
+    public void send(String channel, Object response) {
+        String url = switch (channel) {
+            case "digest" -> digestCallbackUrl;
+            case "vision", "diary" -> diaryCallbackUrl; // 🔁 vision은 diary로 처리
+            default -> diaryCallbackUrl; // 기본 fallback
+        };
+
         try {
             restTemplate.postForEntity(url, response, Void.class);
         } catch (Exception e) {
-            System.err.println("Callback failed: " + e.getMessage());
+            System.err.println(" Callback 전송 실패 (" + channel + "): " + e.getMessage());
         }
     }
 }

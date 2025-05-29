@@ -45,8 +45,12 @@ public class QueueConsumer {
     @Value("${callback.diary}")
     private String diaryCallbackUrl;
 
-    public QueueConsumer(QueueClient queueClient, DigestService digestService,
-                         VisionService visionService, ObjectMapper objectMapper) {
+    public QueueConsumer(
+            QueueClient queueClient,
+            DigestService digestService,
+            VisionService visionService,
+            ObjectMapper objectMapper
+    ) {
         this.queueClient = queueClient;
         this.digestService = digestService;
         this.visionService = visionService;
@@ -61,7 +65,7 @@ public class QueueConsumer {
 
             GetMessagesRequest getMessagesRequest = GetMessagesRequest.builder()
                     .queueId(queueId)
-                    .limit(10) // 한 번에 가져올 메시지 수
+                    .limit(10)
                     .timeoutInSeconds(30)
                     .build();
 
@@ -84,36 +88,37 @@ public class QueueConsumer {
             String messageContent = message.getContent();
             log.info("메시지 처리 시작: {}", messageContent);
 
-            // 메시지에서 채널 정보 추출
-            QueueMessage queueMessage = parseQueueMessage(messageContent);
-            String channel = queueMessage.getChannel();
-            String requestData = queueMessage.getData();
+            String channel = extractChannelFromMetadata(message);
 
             Object result;
             String callbackUrl;
 
-            // 채널별 서비스 처리
             switch (channel.toLowerCase()) {
-                case "diary":
-                    VisionRequest visionRequest = objectMapper.readValue(requestData, VisionRequest.class);
+                case "vision":
+                case "diary": {
+                    VisionRequest visionRequest = objectMapper.readValue(messageContent, VisionRequest.class);
                     result = visionService.process(visionRequest);
                     callbackUrl = diaryCallbackUrl;
                     break;
+                }
 
-                case "digest":
-                    DigestRequest digestRequest = objectMapper.readValue(requestData, DigestRequest.class);
+                case "digest": {
+                    DigestRequest digestRequest = objectMapper.readValue(messageContent, DigestRequest.class);
                     result = digestService.process(digestRequest);
                     callbackUrl = digestCallbackUrl;
                     break;
+                }
 
-                default:
-                    log.warn("알 수 없는 채널: {}. 메시지를 건너뜁니다.", channel);
-                    return;
+                default: {
+                    log.warn("알 수 없는 채널: {}. 기본 채널({})로 처리합니다.", channel, defaultChannel);
+                    VisionRequest defaultRequest = objectMapper.readValue(messageContent, VisionRequest.class);
+                    result = visionService.process(defaultRequest);
+                    callbackUrl = diaryCallbackUrl;
+                    break;
+                }
             }
 
-            // 콜백 전송
             sendCallback(callbackUrl, result);
-
             log.info("메시지 처리 완료 - Channel: {}, Callback: {}", channel, callbackUrl);
 
         } catch (Exception e) {
@@ -121,25 +126,22 @@ public class QueueConsumer {
         }
     }
 
-    private QueueMessage parseQueueMessage(String messageContent) throws Exception {
+    private String extractChannelFromMetadata(GetMessage message) {
         try {
-            // 먼저 QueueMessage 형태로 파싱 시도
-            return objectMapper.readValue(messageContent, QueueMessage.class);
+            if (message.getMetadata() != null && message.getMetadata().getChannelId() != null) {
+                return message.getMetadata().getChannelId();
+            }
         } catch (Exception e) {
-            // 실패하면 기본 채널(diary)로 가정하고 전체를 data로 처리
-            log.info("QueueMessage 형태가 아님. 기본 채널(diary)로 처리: {}", e.getMessage());
-            QueueMessage queueMessage = new QueueMessage();
-            queueMessage.setChannel("diary");
-            queueMessage.setData(messageContent);
-            return queueMessage;
+            log.debug("메타데이터에서 채널 정보 추출 실패: {}", e.getMessage());
         }
+        log.info("메타데이터에 채널 정보가 없어서 기본 채널({})을 사용합니다.", defaultChannel);
+        return defaultChannel;
     }
 
     private void sendCallback(String callbackUrl, Object result) {
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-
             String jsonResult = objectMapper.writeValueAsString(result);
             HttpEntity<String> request = new HttpEntity<>(jsonResult, headers);
 
@@ -149,7 +151,7 @@ public class QueueConsumer {
 
         } catch (Exception e) {
             log.error("콜백 전송 실패 - URL: {}, Error: ", callbackUrl, e);
-            // TODO: 재시도 로직 구현 (여유 있을 때)
+            // TODO: 실패 재시도 로직 필요 시 구현
         }
     }
 
@@ -166,16 +168,5 @@ public class QueueConsumer {
         } catch (Exception e) {
             log.error("메시지 삭제 중 오류 발생: ", e);
         }
-    }
-
-    // 큐 메시지 구조를 정의하는 내부 클래스
-    private static class QueueMessage {
-        private String channel;
-        private String data;
-
-        public String getChannel() { return channel; }
-        public void setChannel(String channel) { this.channel = channel; }
-        public String getData() { return data; }
-        public void setData(String data) { this.data = data; }
     }
 }
