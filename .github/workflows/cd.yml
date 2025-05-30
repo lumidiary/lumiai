@@ -45,7 +45,9 @@ jobs:
 
       - name: Configure kubeconfig
         run: |
-          echo "${{ secrets.KUBE_CONFIG }}" | base64 --decode > $HOME/.kube/config
+          mkdir -p $HOME/.kube
+          touch $HOME/.kube/config
+          echo "${{ secrets.KUBE_CONFIG }}" > $HOME/.kube/config
 
       - name: Apply Kubernetes Secrets
         run: |
