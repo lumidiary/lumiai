@@ -2,12 +2,10 @@ package com.lumidiary.ai.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
-
 import java.util.List;
 
 @Data
 public class GeminiResponse {
-    private List<ImageDescription> imageDescriptions;
     private List<ImageDescription> images;
     private String overallDaySummary;
     private List<String> questions;
@@ -16,7 +14,7 @@ public class GeminiResponse {
     @Data
     public static class ImageDescription {
         @JsonIgnore
-        private int index; // 내부 순서용, 응답에는 포함 안 됨
+        private int index;
         private String imageId;
         private String description;
         private Metadata metadata;

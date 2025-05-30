@@ -1,172 +1,104 @@
 package com.lumidiary.ai.queue;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.lumidiary.ai.dto.*;
+import com.lumidiary.ai.dto.DigestRequest;
+import com.lumidiary.ai.dto.VisionRequest;
+import com.lumidiary.ai.dto.DigestResponse;
+import com.lumidiary.ai.dto.GeminiResponse;
 import com.lumidiary.ai.service.DigestService;
 import com.lumidiary.ai.service.VisionService;
+import com.lumidiary.ai.util.CallbackSender;
 import com.oracle.bmc.queue.QueueClient;
 import com.oracle.bmc.queue.model.GetMessage;
 import com.oracle.bmc.queue.requests.DeleteMessageRequest;
 import com.oracle.bmc.queue.requests.GetMessagesRequest;
 import com.oracle.bmc.queue.responses.GetMessagesResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
 
-@Component
-@ConditionalOnProperty(name = "oci.queue.enabled", havingValue = "true", matchIfMissing = false)
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.List;
+
 @Slf4j
+@Component
+@RequiredArgsConstructor
+@ConditionalOnProperty(name = "oci.queue.enabled", havingValue = "true")
 public class QueueConsumer {
 
     private final QueueClient queueClient;
     private final DigestService digestService;
     private final VisionService visionService;
+    private final CallbackSender callbackSender;
     private final ObjectMapper objectMapper;
-    private final RestTemplate restTemplate;
 
     @Value("${oci.queue.id}")
     private String queueId;
 
-    @Value("${oci.queue.channels.default:diary}")
-    private String defaultChannel;
-
-    @Value("${oci.queue.channels.digest:digest}")
-    private String digestChannel;
-
     @Value("${callback.digest}")
     private String digestCallbackUrl;
 
-    @Value("${callback.diary}")
-    private String diaryCallbackUrl;
+    @Value("${callback.vision}")
+    private String visionCallbackUrl;
 
-    public QueueConsumer(
-            QueueClient queueClient,
-            DigestService digestService,
-            VisionService visionService,
-            ObjectMapper objectMapper
-    ) {
-        this.queueClient = queueClient;
-        this.digestService = digestService;
-        this.visionService = visionService;
-        this.objectMapper = objectMapper;
-        this.restTemplate = new RestTemplate();
-    }
+    @Scheduled(fixedDelay = 5000)
+    public void pollQueue() {
+        GetMessagesRequest getRequest = GetMessagesRequest.builder()
+                .queueId(queueId)
+                .limit(5)
+                .build();
 
-    @Scheduled(fixedDelay = 5000) // 5초마다 실행
-    public void consumeMessages() {
-        try {
-            log.debug("Queue 메시지 확인 시작...");
+        GetMessagesResponse response = queueClient.getMessages(getRequest);
+        List<GetMessage> messages = response.getGetMessages().getMessages();
 
-            GetMessagesRequest getMessagesRequest = GetMessagesRequest.builder()
-                    .queueId(queueId)
-                    .limit(10)
-                    .timeoutInSeconds(30)
-                    .build();
+        for (GetMessage message : messages) {
+            try {
+                // 1. 메시지 원본 로그 출력
+                log.warn("📦 message.getContent(): [{}]", message.getContent());
 
-            GetMessagesResponse response = queueClient.getMessages(getMessagesRequest);
+                // 2. Base64 디코딩
+                String decoded = new String(
+                        Base64.getDecoder().decode(message.getContent().getBytes(StandardCharsets.UTF_8)),
+                        StandardCharsets.UTF_8
+                );
+                log.warn("📝 Decoded JSON String: [{}]", decoded);
 
-            if (response.getGetMessages() != null && response.getGetMessages().getMessages() != null) {
-                for (GetMessage message : response.getGetMessages().getMessages()) {
-                    processMessage(message);
-                    deleteMessage(message.getReceipt());
+                // 3. JSON 파싱
+                JsonNode jsonNode = objectMapper.readTree(decoded);
+                log.debug("🧩 JSON Root Keys: {}", jsonNode.fieldNames());
+
+                // 4. 구조 분기
+                if (jsonNode.has("images") && jsonNode.get("images").isArray()) {
+                    log.info("🔍 메시지 타입: VisionRequest");
+                    VisionRequest visionRequest = objectMapper.treeToValue(jsonNode, VisionRequest.class);
+                    GeminiResponse result = visionService.analyze(visionRequest);
+                    callbackSender.send(visionCallbackUrl, result);
+
+                } else if (jsonNode.has("entries") && jsonNode.get("entries").isArray()) {
+                    log.info("🔍 메시지 타입: DigestRequest");
+                    DigestRequest digestRequest = objectMapper.treeToValue(jsonNode, DigestRequest.class);
+                    DigestResponse result = digestService.createDigest(digestRequest);
+                    callbackSender.send(digestCallbackUrl, result);
+
+                } else {
+                    log.warn(" Unknown message structure. JSON root keys: {}", jsonNode.fieldNames());
                 }
+
+            } catch (Exception e) {
+                log.error(" 메시지 파싱 중 오류 발생 - 원본: {}", message.getContent(), e);
             }
 
-        } catch (Exception e) {
-            log.error("메시지 소비 중 오류 발생: ", e);
-        }
-    }
-
-    private void processMessage(GetMessage message) {
-        try {
-            String messageContent = message.getContent();
-            log.info("메시지 처리 시작: {}", messageContent);
-
-            String channel = extractChannelFromMetadata(message);
-
-            Object result;
-            String callbackUrl;
-
-            switch (channel.toLowerCase()) {
-                case "vision":
-                case "diary": {
-                    VisionRequest visionRequest = objectMapper.readValue(messageContent, VisionRequest.class);
-                    result = visionService.process(visionRequest);
-                    callbackUrl = diaryCallbackUrl;
-                    break;
-                }
-
-                case "digest": {
-                    DigestRequest digestRequest = objectMapper.readValue(messageContent, DigestRequest.class);
-                    result = digestService.process(digestRequest);
-                    callbackUrl = digestCallbackUrl;
-                    break;
-                }
-
-                default: {
-                    log.warn("알 수 없는 채널: {}. 기본 채널({})로 처리합니다.", channel, defaultChannel);
-                    VisionRequest defaultRequest = objectMapper.readValue(messageContent, VisionRequest.class);
-                    result = visionService.process(defaultRequest);
-                    callbackUrl = diaryCallbackUrl;
-                    break;
-                }
-            }
-
-            sendCallback(callbackUrl, result);
-            log.info("메시지 처리 완료 - Channel: {}, Callback: {}", channel, callbackUrl);
-
-        } catch (Exception e) {
-            log.error("메시지 처리 중 오류 발생 - Message ID: {}, Error: ", message.getId(), e);
-        }
-    }
-
-    private String extractChannelFromMetadata(GetMessage message) {
-        try {
-            if (message.getMetadata() != null && message.getMetadata().getChannelId() != null) {
-                return message.getMetadata().getChannelId();
-            }
-        } catch (Exception e) {
-            log.debug("메타데이터에서 채널 정보 추출 실패: {}", e.getMessage());
-        }
-        log.info("메타데이터에 채널 정보가 없어서 기본 채널({})을 사용합니다.", defaultChannel);
-        return defaultChannel;
-    }
-
-    private void sendCallback(String callbackUrl, Object result) {
-        try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            String jsonResult = objectMapper.writeValueAsString(result);
-            HttpEntity<String> request = new HttpEntity<>(jsonResult, headers);
-
-            log.info("콜백 전송 시작 - URL: {}", callbackUrl);
-            restTemplate.postForEntity(callbackUrl, request, String.class);
-            log.info("콜백 전송 완료 - URL: {}", callbackUrl);
-
-        } catch (Exception e) {
-            log.error("콜백 전송 실패 - URL: {}, Error: ", callbackUrl, e);
-            // TODO: 실패 재시도 로직 필요 시 구현
-        }
-    }
-
-    private void deleteMessage(String receipt) {
-        try {
+            // 5. 메시지 삭제
             DeleteMessageRequest deleteRequest = DeleteMessageRequest.builder()
                     .queueId(queueId)
-                    .messageReceipt(receipt)
+                    .messageReceipt(message.getReceipt())
                     .build();
-
             queueClient.deleteMessage(deleteRequest);
-            log.debug("메시지 삭제 완료: {}", receipt);
-
-        } catch (Exception e) {
-            log.error("메시지 삭제 중 오류 발생: ", e);
         }
     }
 }

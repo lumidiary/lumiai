@@ -3,20 +3,23 @@ server:
 
 spring:
   application:
-    name: lumiai  # AI 서비스명
+    name: lumiai
+  jackson:
+    property-naming-strategy: SNAKE_CASE
 
 gemini:
-  api-key: ${GEMINI_API_KEY:YOUR_GEMINI_API_KEY_HERE}
+  api-key: AIzaSyClki06u4CpL-MKeRWW4qshV6iXGTQxnCI
 
 google:
   maps:
-    api-key: ${GOOGLE_MAPS_API_KEY:YOUR_GOOGLE_MAPS_API_KEY_HERE}
+    api-key: AIzaSyD18WLysuSZBJ7t6Tqk_nUZF4rrcxJXCJU
 
 callback:
   #digest: http://localhost:8081/api/callback/digest
   #diary: http://localhost:8081/api/callback/diary
   digest: https://webhook.site/faa08971-df96-4069-9057-bb6b525575b6/digest
   diary: https://webhook.site/faa08971-df96-4069-9057-bb6b525575b6/diary
+  vision: https://webhook.site/faa08971-df96-4069-9057-bb6b525575b6/vision
 
 oci:
   tenancy:

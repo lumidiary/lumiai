@@ -6,9 +6,7 @@ import com.lumidiary.ai.util.PromptBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -20,20 +18,12 @@ import java.util.*;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class DigestService {
 
     private final GeminiApiClient geminiApiClient;
     private final ObjectMapper objectMapper;
-    // CallbackSender 의존성 제거 (OCI Queue에서 콜백 처리)
 
     public DigestResponse createDigest(DigestRequest request) throws IOException {
-        // ID가 없으면 UUID 자동 생성
-        if (request.getId() == null || request.getId().trim().isEmpty()) {
-            request.setId(UUID.randomUUID().toString());
-            log.info("DigestRequest ID가 없어서 UUID 자동 생성: {}", request.getId());
-        }
-
         // Gemini에게 보낼 요청 객체 생성
         DigestRequestForPrompt requestForPrompt = preparePromptRequest(request);
 
@@ -47,8 +37,8 @@ public class DigestService {
         // 최종 응답 조립
         DigestResponse response = assembleResponse(responseNode, request.getEntries());
 
-        // 요청의 ID를 UUID로 변환하여 응답에 설정
-        response.setId(UUID.fromString(request.getId()));
+        // 요청의 ID를 응답에 설정
+        response.setId(request.getId());
 
         return response;
     }
@@ -84,7 +74,7 @@ public class DigestService {
 
         DigestRequestForPrompt requestForPrompt = new DigestRequestForPrompt();
         requestForPrompt.setEntries(entriesForPrompt);
-        requestForPrompt.setUser_locale(request.getUser_locale());
+        requestForPrompt.setUser_locale(request.getUserLocale());
 
         return requestForPrompt;
     }
@@ -128,7 +118,7 @@ public class DigestService {
         }
 
         if (responseNode.has("summary")) {
-            response.setDigestSummary(responseNode.get("summary").asText());  // summary → digestSummary
+            response.setSummary(responseNode.get("summary").asText());
         }
         if (responseNode.has("overallEmotion")) {
             response.setOverallEmotion(responseNode.get("overallEmotion").asText());
@@ -193,20 +183,7 @@ public class DigestService {
         for (int i = 0; i < originalEntries.size(); i++) {
             DigestEntry entry = originalEntries.get(i);
             DigestResponse.EntryDigest digest = new DigestResponse.EntryDigest();
-
-            // ★ 방어 로직 추가: entry.getId()가 null/빈값인 경우 새 UUID 생성
-            String rawId = entry.getId();
-            if (rawId != null && !rawId.isBlank()) {
-                try {
-                    digest.setId(UUID.fromString(rawId));
-                } catch (IllegalArgumentException e) {
-                    digest.setId(UUID.randomUUID());
-                    log.warn("Entry ID가 UUID 형식이 아니어서 새로 생성: {} → {}", rawId, digest.getId());
-                }
-            } else {
-                digest.setId(UUID.randomUUID());
-                log.warn("Entry ID가 null 또는 빈 문자열이어서 새로 생성: {}", digest.getId());
-            }
+            digest.setId(entry.getId());
 
             // LLM에서 생성된 요약이 있으면 사용, 없으면 overallDaySummary 사용
             String summary = entrySummaryMap.getOrDefault(i, entry.getOverallDaySummary());
@@ -288,13 +265,5 @@ public class DigestService {
         period.setEnd(latestDate.format(outputFormatter));
 
         return period;
-    }
-
-    public Object process(DigestRequest request) {
-        try {
-            return this.createDigest(request);
-        } catch (IOException e) {
-            throw new RuntimeException("Digest 생성 중 오류 발생", e);
-        }
     }
 }

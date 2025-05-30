@@ -1,17 +1,17 @@
 package com.lumidiary.ai.service;
 
-import com.lumidiary.ai.dto.*;
+import com.lumidiary.ai.dto.GeminiResponse;
+import com.lumidiary.ai.dto.VisionRequest;
+import com.lumidiary.ai.dto.Metadata;
 import com.lumidiary.ai.integration.GeminiApiClient;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class VisionService {
 
     private final MetadataService metadataService;
@@ -24,55 +24,24 @@ public class VisionService {
 
         for (VisionRequest.ImageData image : request.getImages()) {
             byte[] imageBytes = restTemplate.getForObject(image.getUrl(), byte[].class);
+            // 이미지 데이터가 반드시 존재해야 함
             if (imageBytes == null || imageBytes.length == 0) {
-                throw new Exception("이미지 다운로드 실패: " + image.getId());
+                throw new Exception("이미지 데이터 다운로드 실패 for image id: " + image.getId());
             }
             imageBytesMap.put(image.getId(), imageBytes);
 
             Metadata metadata = metadataService.extractMetadata(imageBytes);
             metadataMap.put(image.getId(), metadata);
         }
-
         GeminiResponse response = geminiApiClient.requestToGemini(request, metadataMap, imageBytesMap);
 
-        if (response.getLanguage() == null || response.getLanguage().isEmpty()) {
-            response.setLanguage(request.getUserLocale() != null ? request.getUserLocale() : "ko");
+        // 요청 시 이미지 순서대로 각 이미지 설명에 ID와 metadata 추가
+        for (int i = 0; i < request.getImages().size() && i < response.getImages().size(); i++) {
+            VisionRequest.ImageData image = request.getImages().get(i);
+            GeminiResponse.ImageDescription imgDesc = response.getImages().get(i);
+            imgDesc.setImageId(image.getId());
+            imgDesc.setMetadata(metadataMap.get(image.getId()));
         }
-
-        if (response.getOverallDaySummary() == null || response.getOverallDaySummary().isEmpty()) {
-            response.setOverallDaySummary("오늘 하루의 사진 요약입니다.");
-        }
-
-        if (response.getQuestions() == null || response.getQuestions().isEmpty()) {
-            response.setQuestions(List.of(
-                    "이 사진은 어떤 상황인가요?",
-                    "당시 기분은 어땠나요?",
-                    "이 순간이 인상 깊었던 이유는?"
-            ));
-        }
-
-        if (response.getImageDescriptions() == null || response.getImageDescriptions().isEmpty()) {
-            List<GeminiResponse.ImageDescription> descriptions = new ArrayList<>();
-            for (VisionRequest.ImageData image : request.getImages()) {
-                GeminiResponse.ImageDescription desc = new GeminiResponse.ImageDescription();
-                desc.setImageId(image.getId());
-                desc.setDescription("설명이 제공되지 않았습니다.");
-                desc.setMetadata(metadataMap.get(image.getId()));
-                descriptions.add(desc);
-            }
-            response.setImageDescriptions(descriptions);
-            response.setImages(descriptions);
-        }
-
         return response;
-    }
-
-    public Object process(VisionRequest request) {
-        try {
-            return this.analyze(request);
-        } catch (Exception e) {
-            log.error("Vision 분석 중 오류 발생", e);
-            throw new RuntimeException("Vision 분석 중 오류 발생: " + e.getMessage(), e);
-        }
     }
 }
