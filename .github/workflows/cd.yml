@@ -77,9 +77,10 @@ jobs:
 
       - name: Install OCI CLI
         run: |
-          curl -L https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh \
-            | bash -s -- --accept-all-defaults --install-dir /usr/local/oci-cli --bin-dir /usr/local/bin
-          echo "/usr/local/bin" >> $GITHUB_PATH
+          sudo apt-get update
+          sudo apt-get install -y python3-pip
+          pip3 install oci-cli
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Prepare kubeconfig directory
         run: |
