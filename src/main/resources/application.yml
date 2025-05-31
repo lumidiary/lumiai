@@ -2,9 +2,27 @@ server:
   port: 8080
 
 gemini:
-  api-key: ${GEMINI_API_KEY:YOUR_GEMINI_API_KEY_HERE}
+  api-key: ${GEMINI_API_KEY}
 
 google:
   maps:
-    api-key: ${GOOGLE_MAPS_API_KEY:YOUR_GOOGLE_MAPS_API_KEY_HERE}
+    api-key: ${GOOGLE_MAPS_API_KEY}
 
+oci:
+  user-ocid: ${OCI_USER_OCID}
+  tenancy-ocid: ${OCI_TENANCY_OCID}
+  api-key-fingerprint: ${OCI_API_KEY_FINGERPRINT}
+  private-key: ${OCI_PRIVATE_KEY}
+  region: ${OCI_REGION}
+  queue:
+    endpoint: ${OCI_QUEUE_ENDPOINT}
+    ocid: ${OCI_QUEUE_OCID}
+    diary:
+      channel-value: ${OCI_QUEUE_DIARY_CHANNEL_VALUE:diary}
+      callback-url: ${OCI_QUEUE_DIARY_CALLBACK_URL}
+    digest:
+      channel-value: ${OCI_QUEUE_DIGEST_CHANNEL_VALUE:digest}
+      callback-url: ${OCI_QUEUE_DIGEST_CALLBACK_URL}
+    polling:
+      delay: ${OCI_QUEUE_POLLING_DELAY:5000}
+      initial-delay: ${OCI_QUEUE_POLLING_INITIAL_DELAY:1000}
