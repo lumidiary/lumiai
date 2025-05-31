@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: ai-service
-          image: yny.ocir.io/ax5ipvulwvc1/lumiai:latest
+          image: IMAGE_PLACEHOLDER
           ports:
             - containerPort: 8080
 ---
