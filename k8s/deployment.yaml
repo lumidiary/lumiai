@@ -21,6 +21,9 @@ spec:
           image: IMAGE_PLACEHOLDER
           ports:
             - containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: lumiai-env
 ---
 apiVersion: v1
 kind: Service
