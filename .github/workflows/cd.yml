@@ -117,23 +117,23 @@ jobs:
           OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_PRIVATE_KEY }}
           OCI_CLI_REGION: ${{ secrets.OCI_REGION }}
         run: |
-          kubectl delete secret lumiai-env --ignore-not-found=true
-          kubectl create secret generic lumiai-env \\
-            --from-literal=GEMINI_API_KEY='${{ secrets.GEMINI_API_KEY }}' \\
-            --from-literal=GOOGLE_MAPS_API_KEY='${{ secrets.GOOGLE_MAPS_API_KEY }}' \\
-            --from-literal=OCI_USER_OCID='${{ secrets.OCI_USER_OCID }}' \\
-            --from-literal=OCI_TENANCY_OCID='${{ secrets.OCI_TENANCY_OCID }}' \\
-            --from-literal=OCI_API_KEY_FINGERPRINT='${{ secrets.OCI_API_KEY_FINGERPRINT }}' \\
-            --from-literal=OCI_PRIVATE_KEY='${{ secrets.OCI_PRIVATE_KEY }}' \\
-            --from-literal=OCI_REGION='${{ secrets.OCI_REGION }}' \\
-            --from-literal=OCI_QUEUE_ENDPOINT='${{ secrets.OCI_QUEUE_ENDPOINT }}' \\
-            --from-literal=OCI_QUEUE_OCID='${{ secrets.OCI_QUEUE_OCID }}' \\
-            --from-literal=OCI_QUEUE_DIARY_CHANNEL_VALUE='${{ secrets.OCI_QUEUE_DIARY_CHANNEL_VALUE }}' \\
-            --from-literal=OCI_QUEUE_DIARY_CALLBACK_URL='${{ secrets.OCI_QUEUE_DIARY_CALLBACK_URL }}' \\
-            --from-literal=OCI_QUEUE_DIGEST_CHANNEL_VALUE='${{ secrets.OCI_QUEUE_DIGEST_CHANNEL_VALUE }}' \\
-            --from-literal=OCI_QUEUE_DIGEST_CALLBACK_URL='${{ secrets.OCI_QUEUE_DIGEST_CALLBACK_URL }}' \\
-            --from-literal=OCI_QUEUE_POLLING_DELAY='${{ secrets.OCI_QUEUE_POLLING_DELAY }}' \\
-            --from-literal=OCI_QUEUE_POLLING_INITIAL_DELAY='${{ secrets.OCI_QUEUE_POLLING_INITIAL_DELAY }}'
+          kubectl delete secret lumiai-env --ignore-not-found
+          kubectl create secret generic lumiai-env \
+            --from-literal=GEMINI_API_KEY="${{ secrets.GEMINI_API_KEY }}" \
+            --from-literal=GOOGLE_MAPS_API_KEY="${{ secrets.GOOGLE_MAPS_API_KEY }}" \
+            --from-literal=OCI_USER_OCID="${{ secrets.OCI_USER_OCID }}" \
+            --from-literal=OCI_TENANCY_OCID="${{ secrets.OCI_TENANCY_OCID }}" \
+            --from-literal=OCI_API_KEY_FINGERPRINT="${{ secrets.OCI_API_KEY_FINGERPRINT }}" \
+            --from-literal=OCI_PRIVATE_KEY="${{ secrets.OCI_PRIVATE_KEY }}" \
+            --from-literal=OCI_REGION="${{ secrets.OCI_REGION }}" \
+            --from-literal=OCI_QUEUE_ENDPOINT="${{ secrets.OCI_QUEUE_ENDPOINT }}" \
+            --from-literal=OCI_QUEUE_OCID="${{ secrets.OCI_QUEUE_OCID }}" \
+            --from-literal=OCI_QUEUE_DIARY_CHANNEL_VALUE="${{ secrets.OCI_QUEUE_DIARY_CHANNEL_VALUE }}" \
+            --from-literal=OCI_QUEUE_DIARY_CALLBACK_URL="${{ secrets.OCI_QUEUE_DIARY_CALLBACK_URL }}" \
+            --from-literal=OCI_QUEUE_DIGEST_CHANNEL_VALUE="${{ secrets.OCI_QUEUE_DIGEST_CHANNEL_VALUE }}" \
+            --from-literal=OCI_QUEUE_DIGEST_CALLBACK_URL="${{ secrets.OCI_QUEUE_DIGEST_CALLBACK_URL }}" \
+            --from-literal=OCI_QUEUE_POLLING_DELAY="${{ secrets.OCI_QUEUE_POLLING_DELAY }}" \
+            --from-literal=OCI_QUEUE_POLLING_INITIAL_DELAY="${{ secrets.OCI_QUEUE_POLLING_INITIAL_DELAY }}"
 
       - name: Update Deployment Image
         run: |
@@ -157,7 +157,7 @@ jobs:
           OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_PRIVATE_KEY }}
           OCI_CLI_REGION: ${{ secrets.OCI_REGION }}
         run: |
-          kubectl rollout status deployment/lumiai-app --timeout=300s
+          kubectl rollout status deployment/ai-service --timeout=300s
 
       - name: Verify Deployment
         env:
@@ -167,5 +167,5 @@ jobs:
           OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_PRIVATE_KEY }}
           OCI_CLI_REGION: ${{ secrets.OCI_REGION }}
         run: |
-          kubectl get pods -l app=lumiai-app
+          kubectl get pods -l app=ai-service
           kubectl get services
