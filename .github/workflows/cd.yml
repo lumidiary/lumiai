@@ -27,6 +27,22 @@ jobs:
         run: mvn --batch-mode clean package -DskipTests
 
       - name: Run Tests
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+          OCI_USER_OCID: ${{ secrets.OCI_USER_OCID }}
+          OCI_TENANCY_OCID: ${{ secrets.OCI_TENANCY_OCID }}
+          OCI_API_KEY_FINGERPRINT: ${{ secrets.OCI_API_KEY_FINGERPRINT }}
+          OCI_PRIVATE_KEY: ${{ secrets.OCI_PRIVATE_KEY }}
+          OCI_REGION: ${{ secrets.OCI_REGION }}
+          OCI_QUEUE_ENDPOINT: ${{ secrets.OCI_QUEUE_ENDPOINT }}
+          OCI_QUEUE_OCID: ${{ secrets.OCI_QUEUE_OCID }}
+          OCI_QUEUE_DIARY_CHANNEL_VALUE: ${{ secrets.OCI_QUEUE_DIARY_CHANNEL_VALUE }}
+          OCI_QUEUE_DIARY_CALLBACK_URL: ${{ secrets.OCI_QUEUE_DIARY_CALLBACK_URL }}
+          OCI_QUEUE_DIGEST_CHANNEL_VALUE: ${{ secrets.OCI_QUEUE_DIGEST_CHANNEL_VALUE }}
+          OCI_QUEUE_DIGEST_CALLBACK_URL: ${{ secrets.OCI_QUEUE_DIGEST_CALLBACK_URL }}
+          OCI_QUEUE_POLLING_DELAY: ${{ secrets.OCI_QUEUE_POLLING_DELAY }}
+          OCI_QUEUE_POLLING_INITIAL_DELAY: ${{ secrets.OCI_QUEUE_POLLING_INITIAL_DELAY }}
         run: mvn test
 
       - name: Set up Docker Buildx
@@ -73,11 +89,11 @@ jobs:
       - name: Configure kubectl for OKE
         uses: oracle-actions/configure-kubectl-oke@v1.5.0
         env:
-          OCI_CLI_USER: ${{ secrets.OCI_CLI_USER }}
-          OCI_CLI_TENANCY: ${{ secrets.OCI_CLI_TENANCY }}
-          OCI_CLI_FINGERPRINT: ${{ secrets.OCI_CLI_FINGERPRINT }}
-          OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_CLI_KEY_CONTENT }}
-          OCI_CLI_REGION: ${{ secrets.OCI_CLI_REGION }}
+          OCI_CLI_USER: ${{ secrets.OCI_USER_OCID }}
+          OCI_CLI_TENANCY: ${{ secrets.OCI_TENANCY_OCID }}
+          OCI_CLI_FINGERPRINT: ${{ secrets.OCI_API_KEY_FINGERPRINT }}
+          OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_PRIVATE_KEY }}
+          OCI_CLI_REGION: ${{ secrets.OCI_REGION }}
         with:
           cluster: ${{ secrets.OKE_CLUSTER_OCID }}
 
@@ -89,9 +105,22 @@ jobs:
       - name: Update Kubernetes Secrets
         run: |
           kubectl delete secret lumiai-env --ignore-not-found=true
-          kubectl create secret generic lumiai-env \
-            --from-literal=GEMINI_API_KEY='${{ secrets.GEMINI_API_KEY }}' \
-            --from-literal=GOOGLE_MAPS_API_KEY='${{ secrets.GOOGLE_MAPS_API_KEY }}'
+          kubectl create secret generic lumiai-env \\
+            --from-literal=GEMINI_API_KEY='${{ secrets.GEMINI_API_KEY }}' \\
+            --from-literal=GOOGLE_MAPS_API_KEY='${{ secrets.GOOGLE_MAPS_API_KEY }}' \\
+            --from-literal=OCI_USER_OCID='${{ secrets.OCI_USER_OCID }}' \\
+            --from-literal=OCI_TENANCY_OCID='${{ secrets.OCI_TENANCY_OCID }}' \\
+            --from-literal=OCI_API_KEY_FINGERPRINT='${{ secrets.OCI_API_KEY_FINGERPRINT }}' \\
+            --from-literal=OCI_PRIVATE_KEY='${{ secrets.OCI_PRIVATE_KEY }}' \\
+            --from-literal=OCI_REGION='${{ secrets.OCI_REGION }}' \\
+            --from-literal=OCI_QUEUE_ENDPOINT='${{ secrets.OCI_QUEUE_ENDPOINT }}' \\
+            --from-literal=OCI_QUEUE_OCID='${{ secrets.OCI_QUEUE_OCID }}' \\
+            --from-literal=OCI_QUEUE_DIARY_CHANNEL_VALUE='${{ secrets.OCI_QUEUE_DIARY_CHANNEL_VALUE }}' \\
+            --from-literal=OCI_QUEUE_DIARY_CALLBACK_URL='${{ secrets.OCI_QUEUE_DIARY_CALLBACK_URL }}' \\
+            --from-literal=OCI_QUEUE_DIGEST_CHANNEL_VALUE='${{ secrets.OCI_QUEUE_DIGEST_CHANNEL_VALUE }}' \\
+            --from-literal=OCI_QUEUE_DIGEST_CALLBACK_URL='${{ secrets.OCI_QUEUE_DIGEST_CALLBACK_URL }}' \\
+            --from-literal=OCI_QUEUE_POLLING_DELAY='${{ secrets.OCI_QUEUE_POLLING_DELAY }}' \\
+            --from-literal=OCI_QUEUE_POLLING_INITIAL_DELAY='${{ secrets.OCI_QUEUE_POLLING_INITIAL_DELAY }}'
 
       - name: Update Deployment Image
         run: |
