@@ -15,7 +15,7 @@ public class GeminiResponse {
     public static class ImageDescription {
         @JsonIgnore
         private int index;
-        private String imageId;
+        private String id;
         private String description;
         private Metadata metadata;
     }

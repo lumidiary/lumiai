@@ -39,7 +39,7 @@ public class VisionService {
         for (int i = 0; i < request.getImages().size() && i < response.getImages().size(); i++) {
             VisionRequest.ImageData image = request.getImages().get(i);
             GeminiResponse.ImageDescription imgDesc = response.getImages().get(i);
-            imgDesc.setImageId(image.getId());
+            imgDesc.setId(image.getId());
             imgDesc.setMetadata(metadataMap.get(image.getId()));
         }
         return response;
