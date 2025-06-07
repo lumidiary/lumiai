@@ -91,8 +91,9 @@ public class OciQueueListener {
                         log.info("Message (ID: {}) identified for DIARY channel.", messageId);
                         VisionRequest visionRequest = objectMapper.readValue(messageContent, VisionRequest.class);
                         GeminiResponse visionResponse = visionService.analyze(visionRequest);
-                        sendCallback(diaryCallbackUrl, visionResponse);
-                        log.info("Successfully processed DIARY message ID: {}", messageId);
+                        String visionCallbackUrl = diaryCallbackUrl + visionRequest.getId();
+                        sendCallback(visionCallbackUrl, visionResponse);
+                        log.info("Successfully processed DIARY message ID: {}, sent to callback URL: {}", messageId, visionCallbackUrl);
                     } else if (digestChannelIdentifier.equalsIgnoreCase(channelId)) {
                         log.info("Message (ID: {}) identified for DIGEST channel.", messageId);
                         DigestRequest digestRequest = objectMapper.readValue(messageContent, DigestRequest.class);
