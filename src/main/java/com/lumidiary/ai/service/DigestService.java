@@ -74,7 +74,7 @@ public class DigestService {
         
         DigestRequestForPrompt requestForPrompt = new DigestRequestForPrompt();
         requestForPrompt.setEntries(entriesForPrompt);
-        requestForPrompt.setUser_locale(request.getUser_locale());
+        requestForPrompt.setUser_locale(request.getUserLocale());
         
         return requestForPrompt;
     }
